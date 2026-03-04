@@ -290,7 +290,7 @@ locals {
 # Create new instance
 module "elasticsearch" {
   count                             = var.existing_elasticsearch_instance_crn != null ? 0 : 1
-  source                            = "../.."
+  source                            = "git::https://github.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch.git///?ref=issue-16994"
   depends_on                        = [time_sleep.wait_for_authorization_policy, time_sleep.wait_for_backup_kms_authorization_policy]
   resource_group_id                 = module.resource_group.resource_group_id
   name                              = "${local.prefix}${var.name}"
