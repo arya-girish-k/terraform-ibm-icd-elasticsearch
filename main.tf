@@ -316,7 +316,7 @@ resource "ibm_resource_tag" "elasticsearch_tag" {
 module "cbr_rule" {
   count            = length(var.cbr_rules) > 0 ? length(var.cbr_rules) : 0
   source           = "terraform-ibm-modules/cbr/ibm//modules/cbr-rule-module"
-  version          = "1.35.15"
+  version          = "1.35.17"
   rule_description = var.cbr_rules[count.index].description
   enforcement_mode = var.cbr_rules[count.index].enforcement_mode
   rule_contexts    = var.cbr_rules[count.index].rule_contexts
@@ -406,15 +406,29 @@ locals {
   es_username    = local.es_admin_user != null ? local.service_credentials_object["credentials"][local.es_admin_user]["username"] : var.admin_pass != null ? "admin" : null
   es_password    = local.es_admin_user != null ? local.service_credentials_object["credentials"][local.es_admin_user]["password"] : var.admin_pass != null ? ibm_database.elasticsearch.adminpassword : null
   es_url         = local.es_username != null && local.es_password != null ? "https://${local.es_username}:${local.es_password}@${data.ibm_database_connection.database_connection.https[0].hosts[0].hostname}:${data.ibm_database_connection.database_connection.https[0].hosts[0].port}" : null
+  binaries_path  = "/tmp"
 }
 
-resource "null_resource" "put_vectordb_model" {
-  count = var.enable_elser_model ? 1 : 0
-  triggers = {
+resource "terraform_data" "install_required_binaries" {
+  count = var.install_required_binaries ? 1 : 0
+  triggers_replace = {
+    file_changed       = md5(var.enable_elser_model)
+  }
+
+  provisioner "local-exec" {
+    command     = "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path}"
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+resource "terraform_data" "put_vectordb_model" {
+  depends_on = [terraform_data.install_required_binaries]
+  count      = var.enable_elser_model ? 1 : 0
+  triggers_replace = {
     file_changed = md5(var.elser_model_type)
   }
   provisioner "local-exec" {
-    command     = "${path.module}/scripts/put_vectordb_model.sh"
+    command     = "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/put_vectordb_model.sh | bash -s ${local.binaries_path}"
     interpreter = ["/bin/bash", "-c"]
     environment = {
       ES               = local.es_url
@@ -423,14 +437,14 @@ resource "null_resource" "put_vectordb_model" {
   }
 }
 
-resource "null_resource" "start_vectordb_model" {
-  depends_on = [null_resource.put_vectordb_model]
+resource "terraform_data" "start_vectordb_model" {
+  depends_on = [terraform_data.put_vectordb_model]
   count      = var.enable_elser_model ? 1 : 0
-  triggers = {
+  triggers_replace = {
     file_changed = md5(var.elser_model_type)
   }
   provisioner "local-exec" {
-    command     = "${path.module}/scripts/start_vectordb_model.sh"
+    command     = "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/start_vectordb_model.sh | bash"
     interpreter = ["/bin/bash", "-c"]
     environment = {
       ES               = local.es_url

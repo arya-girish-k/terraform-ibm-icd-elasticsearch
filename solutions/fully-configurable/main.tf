@@ -32,7 +32,7 @@ module "kms" {
   }
   count                       = local.create_new_kms_key ? 1 : 0
   source                      = "terraform-ibm-modules/kms-all-inclusive/ibm"
-  version                     = "5.5.31"
+  version                     = "5.5.33"
   create_key_protect_instance = false
   region                      = local.kms_region
   existing_kms_instance_crn   = var.existing_kms_instance_crn
@@ -434,7 +434,7 @@ locals {
 module "secrets_manager_service_credentials" {
   count   = length(local.secrets) > 0 && var.existing_secrets_manager_instance_crn != null ? 1 : 0
   source  = "terraform-ibm-modules/secrets-manager/ibm//modules/secrets"
-  version = "2.13.6"
+  version = "2.13.8"
   # converted into implicit dependency and removed explicit depends_on time_sleep.wait_for_elasticsearch_authorization_policy for this module because of issue https://github.com/terraform-ibm-modules/terraform-ibm-icd-redis/issues/608
   existing_sm_instance_guid   = local.create_secrets_manager_auth_policy > 0 ? time_sleep.wait_for_elasticsearch_authorization_policy[0].triggers["secrets_manager_guid"] : local.existing_secrets_manager_instance_guid
   existing_sm_instance_region = local.create_secrets_manager_auth_policy > 0 ? time_sleep.wait_for_elasticsearch_authorization_policy[0].triggers["secrets_manager_region"] : local.existing_secrets_manager_instance_region
@@ -469,11 +469,24 @@ locals {
   kibana_version            = var.enable_kibana_dashboard ? try(data.external.es_metadata[0].result.version_number, null) : null
   kibana_system_password    = var.enable_kibana_dashboard ? startswith(random_password.kibana_system_password[0].result, "-") ? "J${substr(random_password.kibana_system_password[0].result, 1, -1)}" : startswith(random_password.kibana_system_password[0].result, "_") ? "K${substr(random_password.kibana_system_password[0].result, 1, -1)}" : random_password.kibana_system_password[0].result : null
   kibana_app_login_password = var.enable_kibana_dashboard ? startswith(random_password.kibana_app_login_password[0].result, "-") ? "J${substr(random_password.kibana_app_login_password[0].result, 1, -1)}" : startswith(random_password.kibana_app_login_password[0].result, "_") ? "K${substr(random_password.kibana_app_login_password[0].result, 1, -1)}" : random_password.kibana_app_login_password[0].result : null
+  binaries_path             = "/tmp"
 }
 
+resource "terraform_data" "install_required_binaries" {
+  count = var.install_required_binaries ? 1 : 0
+  triggers_replace = {
+    enable_kibana_dashboard = var.enable_kibana_dashboard
+  }
+
+  provisioner "local-exec" {
+    command     = "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path}"
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
 data "external" "es_metadata" {
-  count   = var.enable_kibana_dashboard ? 1 : 0
-  program = ["bash", "${path.module}/scripts/es_metadata.sh"]
+  depends_on = [terraform_data.install_required_binaries]
+  count      = var.enable_kibana_dashboard ? 1 : 0
+  program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/es_metadata.sh | bash -s ${local.binaries_path}"]
   query = {
     url         = "https://${local.elasticsearch_hostname}:${local.elasticsearch_port}"
     username    = local.elasticsearch_username
@@ -485,7 +498,7 @@ data "external" "es_metadata" {
 module "code_engine_kibana" {
   count               = var.enable_kibana_dashboard ? 1 : 0
   source              = "terraform-ibm-modules/code-engine/ibm"
-  version             = "4.7.29"
+  version             = "4.8.0"
   resource_group_id   = module.resource_group.resource_group_id
   project_name        = local.code_engine_project_name
   existing_project_id = local.code_engine_project_id
