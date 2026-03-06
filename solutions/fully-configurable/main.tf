@@ -472,19 +472,13 @@ locals {
   binaries_path             = "/tmp"
 }
 
-resource "terraform_data" "install_required_binaries" {
-  count = var.install_required_binaries ? 1 : 0
-  triggers_replace = {
-    enable_kibana_dashboard = var.enable_kibana_dashboard
-  }
-
-  provisioner "local-exec" {
-    command     = "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path}"
-    interpreter = ["/bin/bash", "-c"]
-  }
+data "external" "install_required_binaries" {
+  count   = var.install_required_binaries ? 1 : 0
+  program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path} >/dev/null 2>&1 && echo '{\"status\":\"success\"}'"]
 }
+
 data "external" "es_metadata" {
-  depends_on = [terraform_data.install_required_binaries]
+  depends_on = [data.external.install_required_binaries]
   count      = var.enable_kibana_dashboard ? 1 : 0
   program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/es_metadata.sh | bash -s ${local.binaries_path}"]
   query = {
