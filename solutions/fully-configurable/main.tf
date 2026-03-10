@@ -474,13 +474,13 @@ locals {
 
 data "external" "install_required_binaries" {
   count   = var.install_required_binaries ? 1 : 0
-  program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path}"]
+  program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/solutions/fuly-configurable/scripts/install-binaries.sh | bash -s ${local.binaries_path}"]
 }
 
 data "external" "es_metadata" {
   depends_on = [data.external.install_required_binaries]
   count      = var.enable_kibana_dashboard ? 1 : 0
-  program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/es_metadata.sh | bash -s ${local.binaries_path}"]
+  program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/solutions/fuly-configurable/scripts/es_metadata.sh | bash -s ${local.binaries_path}"]
   query = {
     url         = "https://${local.elasticsearch_hostname}:${local.elasticsearch_port}"
     username    = local.elasticsearch_username
