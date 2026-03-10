@@ -474,7 +474,7 @@ locals {
 
 data "external" "install_required_binaries" {
   count   = var.install_required_binaries ? 1 : 0
-  program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path} >/dev/null 2>&1 && echo '{\"status\":\"success\"}'"]
+  program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/scripts/install-binaries.sh | bash -s ${local.binaries_path}"]
 }
 
 data "external" "es_metadata" {
