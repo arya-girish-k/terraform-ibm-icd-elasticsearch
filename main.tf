@@ -410,7 +410,7 @@ locals {
 }
 
 resource "terraform_data" "install_required_binaries" {
-  count = var.install_required_binaries ? 1 : 0
+  count = var.install_required_binaries && var.enable_elser_model ? 1 : 0
   triggers_replace = {
     file_changed = md5(var.elser_model_type)
   }

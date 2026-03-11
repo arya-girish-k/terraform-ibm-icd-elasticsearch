@@ -110,7 +110,7 @@ variable "elser_model_type" {
 variable "service_endpoints" {
   type        = string
   description = "The type of endpoint of the database instance. Possible values: `public`, `private`, `public-and-private`."
-  default     = "private"
+  default     = "public"
 
   validation {
     condition     = can(regex("^(public|public-and-private|private)$", var.service_endpoints))

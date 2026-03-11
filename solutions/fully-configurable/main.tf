@@ -473,14 +473,14 @@ locals {
 }
 
 data "external" "install_required_binaries" {
-  count   = var.install_required_binaries ? 1 : 0
+  count   = var.install_required_binaries && var.enable_kibana_dashboard ? 1 : 0
   program = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/solutions/fully-configurable/scripts/install-binaries.sh -o /tmp/install-binaries.sh && chmod +x /tmp/install-binaries.sh && /tmp/install-binaries.sh ${local.binaries_path}"]
 }
 
 data "external" "es_metadata" {
   depends_on = [data.external.install_required_binaries]
   count      = var.enable_kibana_dashboard ? 1 : 0
-  program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/solutions/fully-configurable/scripts/es_metadata.sh -o /tmp/es_metadata.sh && chmod +x /tmp/es_metadata.sh && bash /tmp/es_metadata.sh"]
+  program    = ["bash", "-c", "curl -sS https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-icd-elasticsearch/issue-16994/solutions/fully-configurable/scripts/es_metadata.sh -o /tmp/es_metadata.sh && chmod +x /tmp/es_metadata.sh && bash /tmp/es_metadata.sh ${local.binaries_path}"]
   query = {
     url         = "https://${local.elasticsearch_hostname}:${local.elasticsearch_port}"
     username    = local.elasticsearch_username
